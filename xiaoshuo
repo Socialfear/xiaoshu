@@ -1,0 +1,52 @@
+public class Soup {
+    public static void main(String[] args) throws Exception {
+        String url = "https://www.bbiquge.net/book/132488/";
+        String fileName = Jsoup.connect(url).get().select("h1").text();
+        fileName = fileName.replace("/","") + ".txt";
+        File file = new File(fileName);
+        Writer writer =new FileWriter(file,true);
+        List<String> dir = new ArrayList<>();
+        getDir(url,url,dir);
+        getContent(dir,url,writer);
+    }
+   private static void getDir(String root,String next,List<String> dir) throws Exception {
+       Document document = Jsoup.connect(next).get();
+       Elements elements = document.select("a[href$=\".html\"]");
+       List<String> list = elements.eachAttr("href");
+       list.remove(0);
+       if (elements.last().text().equals("下一页")){
+            String nextPage = list.get(list.size() - 1);
+            nextPage = root +  nextPage.substring(nextPage.lastIndexOf("/") + 1);
+            list.remove(list.size() - 1);
+            if (elements.get(elements.size() - 2).text().equals("上一页")){
+                list.remove(list.size() - 1);
+            }
+            dir.addAll(list);
+            getDir(root,nextPage,dir);
+            return;
+       }
+       if ((elements.last().text().equals("上一页"))){
+           list.remove(list.size() - 1);
+       }
+       dir.addAll(list);
+   }
+   private static void getContent(List<String> dir,String root, Writer writer) throws Exception {
+        StringBuilder temp = new StringBuilder();
+        for (String url : dir) {
+           Document document = Jsoup.connect(root + url).get();
+           String title = document.select("h1").text() + "\n";
+           System.out.println(title);
+           Elements content = document.select("div[id=\"content\"]");
+           String text = content.toString();
+           int i = text.indexOf("&");
+           if (i != -1){
+               text = text.substring(i);
+           }
+           text = text.replaceAll("    ","").replaceAll("<br><br>","").replaceAll("</div>","");
+           temp.append(title + text);
+       }
+       IOUtils.write(temp,writer);
+       writer.close();
+       IOUtils.close();
+   }
+}
